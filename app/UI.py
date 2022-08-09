@@ -4,9 +4,9 @@ import tkinter
 import json
 from tkinter import Scrollbar, StringVar, messagebox
 from tkinter.font import BOLD
-from bill import bill
-from calculate import calculate
-from balance import balance
+from app.bill import bill
+from app.calculate import calculate
+from app.balance import balance
 
 class GUI:
     def __init__(self):
@@ -31,20 +31,6 @@ class GUI:
         self.DrawButtons()
 
         self.mainWindow.mainloop()
-
-    def SetGeometery(self, window):
-        width = window.winfo_width()
-        height = window.winfo_height()
-
-        screen_width = window.winfo_screenwidth()
-        screen_height = window.winfo_screenheight()
-
-        offset = -60
-
-        center_x = int(screen_width/2 - width / 2) + int(offset)
-        center_y = int(screen_height/2 - height / 2)
-
-        window.geometry(f'+{center_x}+{center_y}')
     
     def SetGeometry(self, width, height, window):
         window_width = width
@@ -56,7 +42,7 @@ class GUI:
         center_x = int(screen_width/2 - window_width / 2)
         center_y = int(screen_height/2 - window_height / 2)
 
-        window.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
+        window.geometry('{}x{}+{}+{}'.format(window_width, window_height, center_x, center_y))
 
     def AddBillFrame(self, __bill):
         
@@ -71,7 +57,7 @@ class GUI:
 
         bill_name_label = tkinter.Label(
             bill_Frame, 
-            text = f"{__bill.name}:", 
+            text = "{}:".format(__bill.name), 
             font=("Arial", 20, BOLD))
 
         bill_name_label.grid(

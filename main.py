@@ -1,4 +1,4 @@
-from UI import GUI
+from app.UI import GUI
 
 def main():
     #add scrollable canvas
