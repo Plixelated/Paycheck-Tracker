@@ -3,7 +3,7 @@ class calculate:
          pass
 
     def PayBill(self, balance, bill):
-        newBalance = int(balance.GetTotal()) - int(bill.get("total"))
+        newBalance = float(balance.GetTotal()) - float(bill.get("total"))
         balance.SetTotal(newBalance)
         #__newBalance = balance.CalculatePayment(bill)
         #balance.SetTotal(__newBalance)

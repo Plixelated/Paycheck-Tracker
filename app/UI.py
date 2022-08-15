@@ -1,9 +1,11 @@
-
 import os
 import tkinter
+from tkinter import ttk
 import json
 from tkinter import Scrollbar, StringVar, messagebox
 from tkinter.font import BOLD
+from tkinter.tix import COLUMN
+from app.ScrollableFrame import ScrollableFrame 
 from app.bill import bill
 from app.calculate import calculate
 from app.balance import balance
@@ -14,23 +16,29 @@ class GUI:
         self.bills = []
         self.bill_checkboxes = []
         self.selected_bills = []
+        self.bill_frames = []
         self.balance = balance(0)
+
 
         self.rows = 1
 
-        self.mainWindow = tkinter.Tk() #Main Window
-        self.mainWindow.title("Bill Pay") #Title
+        self.root = tkinter.Tk() #Main Window
+        self.root.title("Bill Pay") #Title
 
-        self.SetGeometry(500,500, self.mainWindow)
+        self.SetGeometry(700,400, self.root)
         
-        self.mainWindow.grid_columnconfigure((0,8), weight=1)
+        self.root.grid_columnconfigure((0,8), weight=1)
+
+        self.scrollField = ScrollableFrame(self.root)
+        self.scrollField.grid(row=2, column=4, columnspan=5, sticky="nesw")
+        
 
         self.DrawBalance()
 
         self.LoadFile()
         self.DrawButtons()
 
-        self.mainWindow.mainloop()
+        self.root.mainloop()
     
     def SetGeometry(self, width, height, window):
         window_width = width
@@ -47,27 +55,30 @@ class GUI:
     def AddBillFrame(self, __bill):
         
         self.rows+=1 
+        total = __bill.total
+        total = "${:0,.2f}".format(float(total))
 
-        bill_Frame = tkinter.Frame()
+        bill_Frame = tkinter.Frame(self.scrollField.scrollable_frame)
         bill_Frame.grid(
-            row = self.rows, 
-            column=1, 
-            columnspan=7,
-            pady=15)
+            row = self.rows,
+            sticky="ew",
+            pady=15
+        )
 
         bill_name_label = tkinter.Label(
             bill_Frame, 
             text = "{}:".format(__bill.name), 
-            font=("Arial", 20, BOLD))
+            font=("Arial", 20, BOLD)
+            )
 
         bill_name_label.grid(
             row = self.rows, 
             column=2,
-            sticky="sw")
+            sticky="s")
 
         bill_amount_label = tkinter.Label(
             bill_Frame, 
-            text ="${}".format(__bill.total), 
+            text ="{}".format(total), 
             font=("Arial", 20))
 
         bill_amount_label.grid(
@@ -96,7 +107,7 @@ class GUI:
             variable=bill_pay_checkValue,
             onvalue=1,
             offvalue=0,
-            command=lambda: self.CheckValue(self.bill_checkboxes[index], index))
+            command=lambda: self.Calculate(index))#self.CheckValue(self.bill_checkboxes[index], index))
 
         bill_pay_checkbox.grid(
             row = self.rows, 
@@ -115,9 +126,15 @@ class GUI:
         bill_remove_button.grid(
             row=self.rows,
             column=7,
-            sticky="se"
+            sticky="s"
         )
-        
+
+        '''children_widgets = bill_Frame.winfo_children()
+        for child_widget in children_widgets:
+            if child_widget.winfo_class() == 'Label':
+                print(child_widget.cget("text"))'''
+
+    #DEPRECATED
     def CheckValue(self, checkbox, index):
         if checkbox.get():
             self.selected_bills.append(self.bills[index])
@@ -159,6 +176,8 @@ class GUI:
         name = self.name_input.get(1.0, tkinter.END + "-1c")
         date = self.date_input.get(1.0, tkinter.END + "-1c")
         amt = self.amt_input.get(1.0, tkinter.END + "-1c")
+        amt = amt.replace("$","")
+        amt = amt.replace(",","")
         newBill = bill(name, amt, date)
         newBill.SaveBill()
         print("Added Bill to Dict")
@@ -181,7 +200,8 @@ class GUI:
         except:
             pass
     
-        currentRow = int(self.rows) + 1
+        #currentRow = int(self.rows) + 1
+        currentRow = 5
 
         self.button_frame = tkinter.Frame()
         self.button_frame.grid(
@@ -215,7 +235,7 @@ class GUI:
             sticky="ew") 
         self.save_button.config(width=5)
 
-        self.calc_button = tkinter.Button(
+        '''self.calc_button = tkinter.Button(
             self.button_frame, 
             text="Calculate", 
             command=self.CalculateBills)
@@ -226,7 +246,7 @@ class GUI:
             column=5, 
             columnspan=2,
             sticky="ew") 
-        self.calc_button.config(width=5)
+        self.calc_button.config(width=5)'''
 
         self.exit_button = tkinter.Button(
             self.button_frame, 
@@ -260,7 +280,7 @@ class GUI:
 
         self.income_input = tkinter.Text(
             self.income_frame, 
-            width=5, 
+            width=8, 
             height=1,
             font=("Arial", 20))
 
@@ -300,6 +320,17 @@ class GUI:
             row = 1,
             column=1,
             sticky="sw"
+        )
+
+        self.submit_balance_btn = tkinter.Button(
+            self.income_frame,
+            text="Set",
+            command=lambda: self.AddBalance())
+        
+        self.submit_balance_btn.grid(
+            row = 0,
+            column=5,
+            columnspan=2
         )
 
     def CheckFiles(self):
@@ -343,33 +374,86 @@ class GUI:
                 date = entry.get("due")
                 newBill = bill(name,amt,date)
                 self.AddBillFrame(newBill)
-
+    #DEPRECATED
     def CalculateBills(self):
         calc = calculate()
+        try:
+            if len(self.selected_bills) < 1:
+                raise ValueError
+            else:
+                for bills in self.selected_bills:
+                    calc.PayBill(self.balance, bills)
+
+            self.remaining_balance_value.set(self.balance.GetTotal())
+
+        except ValueError:
+            tkinter.messagebox.showerror("Error", "No Bills Selected")
+
+    def Calculate(self, index):
+        try:
+            if self.balance.GetTotal() == 0 and len(self.income_input.get(1.0, tkinter.END + "-1c")) == 0:
+                raise ValueError
+            else:
+                if self.bill_checkboxes[index].get():
+                    total = float(self.balance.GetTotal()) - float(self.bills[index].get("total"))
+                    total = "{:0,.2f}".format(total)
+                else:
+                    total = float(self.balance.GetTotal()) + float(self.bills[index].get("total"))
+                    total = "{:0,.2f}".format(total)
+            
+                self.balance.SetTotal(total)
+                self.remaining_balance_value.set(self.balance.GetTotal())
+
+        except ValueError:
+            tkinter.messagebox.showerror("Error", "No Income Added")
+        except IndexError:
+            tkinter.messagebox.showerror("Error", "List index: {} out of range".format(index))
+
+    def AddBalance(self):
         try:
             if len(self.income_input.get(1.0, tkinter.END + "-1c")) == 0:
                 raise ValueError
             else:
                 income = self.income_input.get(1.0, tkinter.END + "-1c")
+                income = income.replace(",","")
                 self.balance.SetTotal(income)
 
-            for bills in self.selected_bills:
-                calc.PayBill(self.balance, bills)
+                income_formatted = "{:0,.2f}".format(float(self.balance.GetTotal()))
+                self.remaining_balance_value.set(income_formatted)
 
-            self.remaining_balance_value.set(self.balance.GetTotal())
+                self.income_input.delete("1.0","end")
 
         except ValueError:
             tkinter.messagebox.showerror("Error", "No Income Added")
-
+            
     def RemoveEntry(self,index,frame):
         if tkinter.messagebox.askokcancel("Remove Bill", "Are you sure you want to delete this?"):
             try:
-                for entry in self.selected_bills:
+                '''for entry in self.selected_bills:
                     if entry == self.bills[index]:
                         self.selected_bills.remove(entry)
-                print(self.selected_bills)
+                print(self.selected_bills)'''
+                
+                for entry in self.bill_checkboxes:
+                    if entry.get():
+                        total = float(self.balance.GetTotal()) + float(self.bills[index].get("total"))
+                        total = "{:0,.2f}".format(total)
+                        self.balance.SetTotal(total)
+                        self.remaining_balance_value.set(self.balance.GetTotal())
+
                 self.bills.pop(index)
-                self.bill_checkboxes.pop(index)
+                #self.bill_checkboxes.pop(index)
+
+                for child in self.scrollField.scrollable_frame.winfo_children():
+                    child.destroy()
+                self.bill_checkboxes.clear()
+                for entry in self.bills:
+                    name = entry.get("name")
+                    amt = entry.get("total")
+                    date = entry.get("due")
+                    newBill = bill(name,amt,date)
+                    self.AddBillFrame(newBill)
+
             except IndexError:
                 self.bills.clear()
                 self.bill_checkboxes.clear()
@@ -379,8 +463,8 @@ class GUI:
             else:
                 for widget in frame.winfo_children():
                     widget.destroy()
-                frame.destroy()                
+                frame.destroy()             
                 
     def Exit(self):
         if tkinter.messagebox.askyesno("Exit", "Are you sure you want to exit?"):
-            self.mainWindow.destroy()
+            self.root.destroy()
