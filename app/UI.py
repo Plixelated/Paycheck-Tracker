@@ -391,18 +391,18 @@ class GUI:
 
     def Calculate(self, index):
         try:
-            if self.balance.GetTotal() == 0 and len(self.income_input.get(1.0, tkinter.END + "-1c")) == 0:
+            if float(self.balance.GetTotal()) == 0 and len(self.income_input.get(1.0, tkinter.END + "-1c")) == 0:
                 raise ValueError
             else:
                 if self.bill_checkboxes[index].get():
                     total = float(self.balance.GetTotal()) - float(self.bills[index].get("total"))
-                    total = "{:0,.2f}".format(total)
                 else:
                     total = float(self.balance.GetTotal()) + float(self.bills[index].get("total"))
-                    total = "{:0,.2f}".format(total)
             
-                self.balance.SetTotal(total)
-                self.remaining_balance_value.set(self.balance.GetTotal())
+            self.balance.SetTotal(total)
+
+            income_formatted = "{:0,.2f}".format(float(self.balance.GetTotal()))
+            self.remaining_balance_value.set(income_formatted)
 
         except ValueError:
             tkinter.messagebox.showerror("Error", "No Income Added")
@@ -411,7 +411,9 @@ class GUI:
 
     def AddBalance(self):
         try:
-            if len(self.income_input.get(1.0, tkinter.END + "-1c")) == 0:
+            if float(self.balance.GetTotal()) == 0 and len(self.income_input.get(1.0, tkinter.END + "-1c")) == 0:
+                raise ValueError
+            elif float(self.balance.GetTotal()) > 0 and len(self.income_input.get(1.0, tkinter.END + "-1c")) == 0:
                 raise ValueError
             else:
                 income = self.income_input.get(1.0, tkinter.END + "-1c")
@@ -420,11 +422,12 @@ class GUI:
 
                 income_formatted = "{:0,.2f}".format(float(self.balance.GetTotal()))
                 self.remaining_balance_value.set(income_formatted)
-
+                
                 self.income_input.delete("1.0","end")
-
         except ValueError:
-            tkinter.messagebox.showerror("Error", "No Income Added")
+            self.ErrorMessage("No Income Added")
+        except Exception as e:
+            print(e)
             
     def RemoveEntry(self,index,frame):
         if tkinter.messagebox.askokcancel("Remove Bill", "Are you sure you want to delete this?"):
@@ -437,9 +440,10 @@ class GUI:
                 for entry in self.bill_checkboxes:
                     if entry.get():
                         total = float(self.balance.GetTotal()) + float(self.bills[index].get("total"))
-                        total = "{:0,.2f}".format(total)
                         self.balance.SetTotal(total)
-                        self.remaining_balance_value.set(self.balance.GetTotal())
+
+                        income_formatted = "{:0,.2f}".format(float(self.balance.GetTotal()))
+                        self.remaining_balance_value.set(income_formatted)
 
                 self.bills.pop(index)
                 #self.bill_checkboxes.pop(index)
@@ -463,7 +467,10 @@ class GUI:
             else:
                 for widget in frame.winfo_children():
                     widget.destroy()
-                frame.destroy()             
+                frame.destroy()       
+
+    def ErrorMessage(self,msg):
+        tkinter.messagebox.showerror("Error", msg)
                 
     def Exit(self):
         if tkinter.messagebox.askyesno("Exit", "Are you sure you want to exit?"):
